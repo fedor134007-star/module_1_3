@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Objects;
 
 public class Post {
-    private long id;
-    private long userId;
+    private Long id;
+    private Long userId;
     private String title;
     private String content;
     private List<Label> labels;
@@ -24,7 +24,7 @@ public class Post {
         return gson.fromJson(json, Post.class);
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 

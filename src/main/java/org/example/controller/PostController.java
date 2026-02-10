@@ -3,152 +3,75 @@ package org.example.controller;
 import org.example.model.Label;
 import org.example.model.Post;
 import org.example.model.Status;
-import org.example.view.PostView.PostView;
-import org.example.view.WriterView.WriterView;
+import org.example.model.Writer;
+import org.example.repository.GenericRepository;
+import org.example.repository.PostRepository.PostRepository;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
+import java.util.stream.Collectors;
 
 
 public class PostController {
 
-    private final PostView postView;
-    private final WriterView writerView;
-    private Scanner scanner;
+    private final GenericRepository<Post, Long> postRepository;
+    private final GenericRepository<Label, Long> labelRepository;
+    private final GenericRepository<Writer, Long> writerRepository;
 
-    public PostController(PostView postView, WriterView writerView, Scanner scanner) {
-        this.postView = postView;
-        this.writerView = writerView;
-        this.scanner = scanner;
+    public PostController(GenericRepository<Post, Long> postRepository,
+                          GenericRepository<Label, Long> labelRepository,
+                          GenericRepository<Writer, Long> writerRepository) {
+        this.postRepository = postRepository;
+        this.labelRepository = labelRepository;
+        this.writerRepository = writerRepository;
     }
 
-    Map<Integer, Runnable> commands = new HashMap<>();
+    // получаем все посты и лейблы, добавляем лейблы к постам по совпавшим ID
+    public List<Post> getAll() {
+        Map<Long, List<Label>> labelsByPostId = labelRepository.getAll().stream()
+                .filter(l -> l.getStatus() == Status.ACTIVE && l.getPostId() != null)
+                .collect(Collectors.groupingBy(Label::getPostId));
 
-    private void initCommands() {
-        commands.put(1, this::create);
-        commands.put(2, this::getAll);
-        commands.put(3, this::update);
-        commands.put(4, this::delete);
-
-    }
-
-    private void printMenu() {
-        IO.println("Введите команду:");
-        IO.println("1 - Добавить пост");
-        IO.println("2 - Получить все посты");
-        IO.println("3 - Редактировать пост");
-        IO.println("4 - Удалить пост");
-        IO.println("0 - Что бы выйти из данного меню");
-    }
-
-    public boolean mainMenu() {
-        initCommands();
-        boolean exit = true;
-        while (exit) {
-            printMenu();
-            try {
-                int command = scanner.nextInt();
-                scanner.nextLine();
-                if (command == 0) {
-                    exit = false;
-                    continue;
-                }
-                if (commands.containsKey(command)) commands.get(command).run();
-            } catch (Exception e) {
-                IO.println("Ошибка: пожалуйста, введите число от 0 до 4!");
-                scanner.nextLine();
-            }
-
-        }
-        return false;
+        return postRepository.getAll().stream()
+                .filter(p -> p.getStatus() == Status.ACTIVE)
+                .peek(p -> p.setLabels(labelsByPostId.getOrDefault(p.getId(), new ArrayList<>())))
+                .collect(Collectors.toList());
     }
 
 
-    private void getAll() {
-        postView.getAll().forEach(writer -> IO.println(writer.toString()));
+    public List<Writer> getAllActiveWriters() {
+        return writerRepository.getAll()
+                .stream()
+                .filter(el -> el.getStatus() == Status.ACTIVE)
+                .collect(Collectors.toList());
+        // Никаких проверок на пустоту и выводов в консоль!
     }
 
-    ///  Работа с постами
-    private void create() {
-
+    public Post create(String title, String content, Long userId) {
         Post post = new Post();
-
-        IO.println("Введите ID пользователя, к которому прикрепится пост");
-        writerView.getAll().forEach(writer -> IO.println(writer.toString()));
-        post.setUserId(inputInt());
-        IO.println("Введите заголовок поста");
-        post.setTitle(inputString());
-        IO.println("Введите контент поста");
-        post.setContent(inputString());
-        IO.println("Введите ID поста");
-        post.setId(inputInt());
+        post.setUserId(userId);
+        post.setTitle(title);
+        post.setContent(content);
         post.setStatus(Status.ACTIVE);
-        IO.println(post.toString());
-        postView.create(post);
+        return postRepository.create(post);
     }
 
-
-    private void update() {
-        this.getAll();
-        IO.println("Выберите пост для обновления и введите его ID");
+    public Post update(Long id, String title, String content) {
         Post post = new Post();
-        post.setId(inputInt());
-        IO.println("Введите заголовок поста");
-        post.setTitle(inputString());
-        IO.println("Введите контент поста");
-        post.setContent(inputString());
+        post.setId(id);
+        post.setTitle(title);
+        post.setContent(content);
         post.setStatus(Status.ACTIVE);
-        IO.println(post.toString());
-        postView.update(post);
+        return postRepository.update(post);
     }
 
-    private void delete() {
-        this.getAll();
-        IO.println("Выберите пост для удаления и введите его ID");
-        postView.delete(inputInt());
+    public void delete(Long id) {
+        postRepository.deleteById(id);
     }
 
-
-    private String inputString() {
-        String result = null;
-        boolean valid = false;
-
-        while (!valid) {
-            try {
-                result = scanner.nextLine().trim();
-
-                if (result.isEmpty()) {
-                    IO.println("Вы не ввели значение. Попробуйте еще раз:");
-                } else {
-                    valid = true;
-                }
-            } catch (Exception e) {
-                IO.println("Произошла ошибка попробуйте еще раз");
-            }
-        }
-        return result;
-    }
-
-
-    private int inputInt() {
-        int result = 0;
-        boolean valid = false;
-
-        while (!valid) {
-            try {
-                result = scanner.nextInt();
-                scanner.nextLine();
-                if (result == 0) {
-                    IO.println("Введите значение больше 0");
-                } else {
-                    valid = true;
-                }
-            } catch (Exception e) {
-                IO.println("Произошла ошибка попробуйте еще раз");
-                scanner.nextLine();
-            }
-        }
-        return result;
+    public Post getById(Long id) {
+        return postRepository.getById(id);
     }
 }

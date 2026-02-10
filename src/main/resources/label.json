@@ -1,0 +1,3 @@
+{"id":1,"postId":1,"name":"Лейбл 1","status":"ACTIVE"}
+{"id":2,"postId":2,"name":"Лейбл 2","status":"ACTIVE"}
+{"id":3,"postId":1,"name":"Лейбл 3","status":"DELETED"}

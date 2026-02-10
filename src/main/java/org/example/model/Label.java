@@ -5,8 +5,8 @@ import com.google.gson.Gson;
 import java.util.Objects;
 
 public class Label {
-    private long id;
-    private long postId;
+    private Long id;
+    private Long postId;
     private String name;
     private Status status;
 
@@ -20,16 +20,16 @@ public class Label {
         return gson.fromJson(json, Label.class);
     }
 
-    public long getPostId() {
+    public Long getPostId() {
         return postId;
     }
 
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 

@@ -1,12 +1,20 @@
 package org.example.repository;
 
+import org.example.model.Writer;
+
 import java.io.IOException;
 import java.util.List;
 
 public interface GenericRepository<T, ID> {
-    public void create(T t) throws IOException;
+    T create(T t);
 
-    public void saveAll(List<T> t) throws IOException;
+    List<T> getAll();
 
-    public List<T> getAll() throws IOException;
+    T update(T t);
+
+    T getById(ID id);
+
+    void deleteById(ID t);
+
+
 }

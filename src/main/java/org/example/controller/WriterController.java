@@ -1,147 +1,66 @@
 package org.example.controller;
 
+import org.example.model.Label;
+import org.example.model.Post;
 import org.example.model.Status;
 import org.example.model.Writer;
-import org.example.view.WriterView.WriterView;
+import org.example.repository.GenericRepository;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
+import java.util.stream.Collectors;
 
 
 public class WriterController {
 
-    private final WriterView writerView;
-    private Scanner scanner;
+    private final GenericRepository<Writer, Long> writerRepository;
+    private final GenericRepository<Post, Long> postRepository;
+    private final GenericRepository<Label, Long> labelRepository;
 
-    public WriterController(WriterView writerView, Scanner scanner) {
-        this.writerView = writerView;
-        this.scanner = scanner;
+    public WriterController(GenericRepository<Writer, Long> writerRepository, GenericRepository<Post, Long> postRepository, GenericRepository<Label, Long> labelRepository) {
+        this.writerRepository = writerRepository;
+        this.postRepository = postRepository;
+        this.labelRepository = labelRepository;
     }
 
-    Map<Integer, Runnable> commands = new HashMap<>();
+    public List<Writer> getAllActiveWriters() {
+        Map<Long, List<Label>> labelsByPostId = labelRepository.getAll().stream()
+                .filter(l -> l.getStatus() == Status.ACTIVE && l.getPostId() != null)
+                .collect(Collectors.groupingBy(Label::getPostId));
 
-    private void initCommands() {
-        commands.put(1, this::create);
-        commands.put(2, this::getAll);
-        commands.put(3, this::update);
-        commands.put(4, this::delete);
+        Map<Long, List<Post>> postsByWriterId = postRepository.getAll().stream()
+                .filter(p -> p.getStatus() == Status.ACTIVE)
+                .peek(p -> p.setLabels(labelsByPostId.getOrDefault(p.getId(), new ArrayList<>())))
+                .collect(Collectors.groupingBy(Post::getUserId, Collectors.toList()));
 
+        return writerRepository.getAll().stream()
+                .filter(w -> w.getStatus() == Status.ACTIVE)
+                .peek(w -> w.setPosts(postsByWriterId.getOrDefault(w.getId(), new ArrayList<>())))
+                .collect(Collectors.toList());
     }
 
-    private void printMenu() {
-        IO.println("Введите команду:");
-        IO.println("1 - Добавить пользователя");
-        IO.println("2 - Получить всех пользователей");
-        IO.println("3 - Редактировать пользователя");
-        IO.println("4 - Удалить пользователя");
-        IO.println("0 - Что бы выйти из данного меню");
-    }
-
-    public boolean mainMenu() {
-        initCommands();
-        boolean exit = true;
-        while (exit) {
-            printMenu();
-            try {
-                int command = scanner.nextInt();
-                scanner.nextLine();
-                if (command == 0) {
-                    exit = false;
-                    continue;
-                }
-                if (commands.containsKey(command)) commands.get(command).run();
-            } catch (Exception e) {
-                IO.println("Ошибка: пожалуйста, введите число от 0 до 4!");
-                scanner.nextLine();
-            }
-
-        }
-        return false;
-    }
-
-
-    private void getAll() {
-        writerView.getAll().forEach(writer -> IO.println(writer.toString()));
-    }
-
-    ///  Работа с пользователями
-    private void create() {
+    public Writer create(String firstName, String lastName) {
         Writer writer = new Writer();
-        IO.println("Введите имя пользователя");
-        writer.setFirstName(inputString());
-        IO.println("Введите фамилию пользователя");
-        writer.setLastName(inputString());
-        IO.println("Введите ID пользователя");
-        writer.setId(inputInt());
+        writer.setFirstName(firstName);
+        writer.setLastName(lastName);
         writer.setStatus(Status.ACTIVE);
-        IO.println(writer.toString());
-        writerView.create(writer);
+        return writerRepository.create(writer);
     }
 
-
-    private void update() {
-        this.getAll();
-        IO.println("Выберите пользователя для обновления и введите его ID");
+    public Writer update(Long id, String firstName, String lastName) {
         Writer writer = new Writer();
-        writer.setId(inputInt());
-        IO.println("Введите имя пользователя");
-        writer.setFirstName(inputString());
-        IO.println("Введите фамилию пользователя");
-        writer.setLastName(inputString());
-        writer.setStatus(Status.ACTIVE);
-        IO.println(writer.toString());
-        writerView.update(writer);
+        writer.setId(id);
+        writer.setFirstName(firstName);
+        writer.setLastName(lastName);
+        return writerRepository.update(writer);
     }
 
-    private void delete() {
-        this.getAll();
-        IO.println("Выберите пользователя для удаления и введите его ID");
-        writerView.delete(inputInt());
+    public void delete(Long id) {
+        writerRepository.deleteById(id);
     }
 
-
-
-
-    private String inputString() {
-        String result = null;
-        boolean valid = false;
-
-        while (!valid) {
-            try {
-                result = scanner.nextLine().trim();
-
-                if (result.isEmpty()) {
-                    IO.println("Вы не ввели значение. Попробуйте еще раз:");
-                } else {
-                    valid = true;
-                }
-            } catch (Exception e) {
-                IO.println("Произошла ошибка попробуйте еще раз");
-            }
-        }
-        return result;
-    }
-
-
-    private int inputInt() {
-        int result = 0;
-        boolean valid = false;
-
-        while (!valid) {
-            try {
-                result = scanner.nextInt();
-                scanner.nextLine();
-                if (result == 0) {
-                    IO.println("Введите значение больше 0");
-                } else {
-                    valid = true;
-                }
-            } catch (Exception e) {
-                IO.println("Произошла ошибка попробуйте еще раз");
-                scanner.nextLine();
-            }
-        }
-        return result;
+    public Writer getById(Long id) {
+        return writerRepository.getById(id);
     }
 }

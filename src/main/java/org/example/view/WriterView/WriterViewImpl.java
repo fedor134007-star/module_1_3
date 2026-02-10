@@ -1,111 +1,151 @@
 package org.example.view.WriterView;
 
-import org.example.model.Label;
-import org.example.model.Post;
-import org.example.model.Status;
-import org.example.model.Writer;
-import org.example.repository.LabelRepository.LabelRepository;
-import org.example.repository.PostRepository.PostRepository;
-import org.example.repository.WriterRepository.WriterRepository;
+import org.example.controller.WriterController;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Scanner;
 
 public class WriterViewImpl implements WriterView {
 
-    private final WriterRepository writerRepository;
-    private final PostRepository postRepository;
-    private final LabelRepository labelRepository;
+    final WriterController writerController;
+    final Scanner scanner;
 
-    public WriterViewImpl(WriterRepository writerRepository, PostRepository postRepository, LabelRepository labelRepository) {
-        this.writerRepository = writerRepository;
-        this.postRepository = postRepository;
-        this.labelRepository = labelRepository;
+    public WriterViewImpl(WriterController writerController, Scanner scanner) {
+        this.writerController = writerController;
+        this.scanner = scanner;
     }
 
-    @Override
-    public void update(Writer writer) {
-        try {
-            ArrayList<Writer> allWriters = new ArrayList<>(getAll());
+    Map<Integer, Runnable> commands = new HashMap<>();
 
-            for (var i = 0; i < allWriters.size(); i++) {
-                if (allWriters.get(i).getId() == writer.getId()) {
-                    allWriters.set(i, writer);
+    private void initCommands() {
+        commands.put(1, this::create);
+        commands.put(2, this::getAll);
+        commands.put(3, this::getById);
+        commands.put(4, this::update);
+        commands.put(5, this::delete);
+
+    }
+
+    private void printMenu() {
+        IO.println("Введите команду:");
+        IO.println("1 - Добавить пользователя");
+        IO.println("2 - Получить всех пользователей");
+        IO.println("3 - Получить пользователя по ID");
+        IO.println("4 - Редактировать пользователя");
+        IO.println("5 - Удалить пользователя");
+        IO.println("0 - Что бы выйти из данного меню");
+    }
+
+    public void mainMenu() {
+        initCommands();
+        boolean exit = true;
+        while (exit) {
+            printMenu();
+            try {
+                int command = scanner.nextInt();
+                scanner.nextLine();
+                if (command == 0) {
+                    exit = false;
+                    continue;
                 }
+                if (commands.containsKey(command)) commands.get(command).run();
+            } catch (Exception e) {
+                IO.println("Ошибка: пожалуйста, введите число от 0 до 5!");
+                scanner.nextLine();
             }
-            writerRepository.saveAll(allWriters);
-        } catch (IOException e) {
-            IO.println("Не удалось обновить");
         }
     }
 
-    @Override
-    public void create(Writer writer) {
-        try {
-            writerRepository.create(writer);
-        } catch (IOException e) {
-            IO.println("Не удалось создать запись");
-        }
+    // получить всех пользователей
+    private void getAll() {
+        IO.println(writerController.getAllActiveWriters());
     }
 
 
-    @Override
-    public void delete(long id) {
-        try {
-            ArrayList<Writer> writers = new ArrayList<>(getAll());
-            for (var i = 0; i < writers.size(); i++) {
-                Writer writer = writers.get(i);
-                if (writer.getId() == id) {
-                    writer.setStatus(Status.DELETED);
-                    writers.set(i, writer);
+    private void getById() {
+        IO.println("Выберите ID пользователя");
+        Long id = inputInt();
+        IO.println(writerController.getById(id));
+    }
+
+
+    // получить от пользователя имя и фамилию
+    // отправить в контроллер
+    private void create() {
+        IO.println("Введите имя пользователя");
+        String firstName = inputString();
+        IO.println("Введите фамилию пользователя");
+        String lastName = inputString();
+        writerController.create(firstName, lastName);
+    }
+
+    // получить от пользователя id имя и фамилию
+    // отправить в контроллер
+    private void update() {
+        this.getAll();
+        IO.println("Выберите пользователя для обновления и введите его ID");
+        Long id = inputInt();
+        IO.println("Введите имя пользователя");
+        String firstName = inputString();
+        IO.println("Введите фамилию пользователя");
+        String lastName = inputString();
+        writerController.update(id, firstName, lastName);
+    }
+
+    // получить от пользователя id
+    // отправить в контроллер
+    private void delete() {
+        this.getAll();
+        IO.println("Выберите пользователя для удаления и введите его ID");
+        Long id = inputInt();
+        writerController.delete(id);
+    }
+
+
+    private String inputString() {
+        String result = null;
+        boolean valid = false;
+
+        while (!valid) {
+            try {
+                result = scanner.nextLine().trim();
+
+                if (result.isEmpty()) {
+                    IO.println("Вы не ввели значение. Попробуйте еще раз:");
+                } else {
+                    valid = true;
                 }
+            } catch (Exception e) {
+                IO.println("Произошла ошибка попробуйте еще раз");
             }
-            writerRepository.saveAll(writers);
-        } catch (IOException e) {
-            IO.println("Не удалось удалить");
         }
-    }
-
-    @Override
-    public List<Writer> getAll() {
-        try {
-            // 1. Получаем все данные
-            List<Writer> allWriters = writerRepository.getAll();
-            List<Post> allPosts = postRepository.getAll();
-            List<Label> allLabels = labelRepository.getAll();
-
-            // Для каждого поста находим его лейблы
-            for (Post post : allPosts) {
-                List<Label> postLabels = allLabels.stream()
-                        .filter(label -> label.getPostId() == post.getId())
-                        .collect(Collectors.toList());
-
-                // Устанавливаем лейблы для поста
-                post.setLabels(postLabels);
-            }
-            // Для каждого пользователя находим посты
-            for (Writer writer : allWriters) {
-                List<Post> writerPosts = allPosts.stream()
-                        .filter(post -> post.getUserId() == writer.getId())
-                        .collect(Collectors.toList());
-
-                // Устанавливаем посты для пользователя
-                writer.setPosts(writerPosts);
-            }
-            return allWriters;
-
-        } catch (IOException e) {
-            IO.println("Не удалось получить записи: " + e.getMessage());
-            return new ArrayList<>();
-        } catch (Exception e) {
-            IO.println("Не удалось получить записи произошла ошибка с данными");
-            return new ArrayList<>();
-        }
+        return result;
     }
 
 
+    private Long inputInt() {
+        Long result = 0L;
+        boolean valid = false;
+
+        while (!valid) {
+            try {
+                result = (long) scanner.nextInt();
+                scanner.nextLine();
+                if (result == 0) {
+                    IO.println("Введите значение больше 0");
+                } else {
+                    valid = true;
+                }
+            } catch (Exception e) {
+                IO.println("Произошла ошибка попробуйте еще раз");
+                scanner.nextLine();
+            }
+        }
+        return result;
+    }
 }
+
+
+
+
