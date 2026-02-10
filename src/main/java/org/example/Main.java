@@ -19,6 +19,7 @@ import org.example.view.WriterView.WriterViewImpl;
 import java.util.Scanner;
 
 
+
 public class Main {
     public static void main(String[] args) {
         boolean exit = true;
