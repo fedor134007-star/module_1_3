@@ -1,3 +1,2 @@
-{"id":1,"userId":1,"title":"Заголовок 1","content":"Контент 1","status":"ACTIVE"}
-{"id":2,"userId":2,"title":"Заголовок 2","content":"Контент 2","status":"ACTIVE"}
-{"id":3,"userId":1,"title":"бу","content":"бу","status":"DELETED"}
+{"id":1,"userId":1,"title":"Пост 1","content":"Контент 1","status":"ACTIVE"}
+{"id":2,"userId":1,"title":"Пост 2","content":"Контент 2","status":"ACTIVE"}
